@@ -1,80 +1,69 @@
 #define RAYLIB_TESTER_IMPLEMENTATION
 #include "raylib_tester.h"
-
-#define CANVAS_WIDTH 640
-#define CANVAS_HEIGHT 480
-#define RECT_WIDTH 60
-#define RECT_HEIGHT 40
-#define RECT_SPEED 100.0F
-#define MOUSE_INDICATOR_RADIUS 5.0F
+#include "game.h"
+#include "player.h"
+#include "enemy.h"
+#include "map.h"
+#include "combat.h"
+#include "render.h"
 
 int main(int argc, char* argv[]) {
-  const char* script_path = NULL;
-  if (argc > 1) {
-    script_path = argv[1];
-  }
+    InitWindow(800, 600, "Dark Camp");
+    SetTargetFPS(60);
 
-  InitWindow(CANVAS_WIDTH, CANVAS_HEIGHT, "Game");
-  SetTargetFPS(60);
+    static GameState state = {0};
+    MapInit(&state);
+    PlayerInit(&state.player);
+    EnemiesInit(&state);
+    state.running = true;
+    state.camera_x = state.player.x;
+    state.camera_y = state.player.y;
 
-  RltScriptRunner* runner = NULL;
-  if (script_path != NULL) {
-    runner = RltInitScriptRunner(script_path);
-    if (runner == NULL) {
-      CloseWindow();
-      return 1;
-    }
-  }
-
-  static float rect_x = (float)(CANVAS_WIDTH - RECT_WIDTH) / 2.0F;
-  static float rect_y = (float)(CANVAS_HEIGHT - RECT_HEIGHT) / 2.0F;
-  RltRegisterVar("rect_x", &rect_x, RLT_VAR_FLOAT);
-  RltRegisterVar("rect_y", &rect_y, RLT_VAR_FLOAT);
-
-  while (!WindowShouldClose() && !RltShouldClose()) {
-    float delta = GetFrameTime();
-    if (RltIsKeyDown(KEY_LEFT)) {
-      rect_x -= RECT_SPEED * delta;
-    }
-    if (RltIsKeyDown(KEY_RIGHT)) {
-      rect_x += RECT_SPEED * delta;
-    }
-    if (RltIsKeyPressed(KEY_SPACE)) {
-      rect_x = (float)(CANVAS_WIDTH - RECT_WIDTH) / 2.0F;
+    RltScriptRunner* runner = NULL;
+    if (argc > 1) {
+        runner = RltInitScriptRunner(argv[1]);
+        if (runner == NULL) {
+            CloseWindow();
+            return 1;
+        }
     }
 
-    if (rect_x < 0.0F) {
-      rect_x = 0.0F;
+    RltRegisterVar("player_x", &state.player.x, RLT_VAR_FLOAT);
+    RltRegisterVar("player_y", &state.player.y, RLT_VAR_FLOAT);
+    RltRegisterVar("player_hp", &state.player.hp, RLT_VAR_FLOAT);
+    RltRegisterVar("enemy_count", &state.enemy_count, RLT_VAR_INT);
+    RltRegisterVar("player_kills", &state.player.kills, RLT_VAR_INT);
+
+    while (!WindowShouldClose() && !RltShouldClose() && state.running) {
+        float delta = GetFrameTime();
+
+        PlayerHandleInput(&state, delta);
+        PlayerUpdate(&state, delta);
+        EnemiesUpdate(&state, delta);
+        CombatUpdate(&state);
+
+        state.camera_x = state.player.x;
+        state.camera_y = state.player.y;
+
+        RltClearSimOneshot();
+
+        BeginDrawing();
+        ClearBackground(DARKGRAY);
+        RenderMap(&state);
+        RenderEnemies(&state);
+        RenderPlayer(&state);
+        RenderUI(&state);
+        EndDrawing();
+
+        if (runner != NULL) {
+            RltUpdateScriptRunner(runner);
+        }
     }
-    if ((rect_x + RECT_WIDTH) > CANVAS_WIDTH) {
-      rect_x = (float)(CANVAS_WIDTH - RECT_WIDTH);
-    }
 
-    RltClearSimOneshot();
-
-    BeginDrawing();
-    ClearBackground(RAYWHITE);
-    DrawRectangle((int)rect_x, (int)rect_y, RECT_WIDTH, RECT_HEIGHT, RED);
-
-    Vector2 mouse_pos = GetMousePosition();
-    Color mouse_color = BLUE;
-    if (RltIsMouseButtonDown(MOUSE_BUTTON_LEFT) || RltIsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
-      mouse_color = RED;
-    }
-    DrawCircleV(mouse_pos, MOUSE_INDICATOR_RADIUS, mouse_color);
-
-    DrawFPS(0, 0);
-    EndDrawing();
-
+    bool test_failed = (runner != NULL) && RltScriptRunnerHadError(runner);
     if (runner != NULL) {
-      RltUpdateScriptRunner(runner);
+        RltCloseScriptRunner(runner);
     }
-  }
-
-  bool test_failed = (runner != NULL) && RltScriptRunnerHadError(runner);
-  if (runner != NULL) {
-    RltCloseScriptRunner(runner);
-  }
-  CloseWindow();
-  return test_failed ? 1 : 0;
+    CloseWindow();
+    return test_failed ? 1 : 0;
 }
