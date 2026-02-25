@@ -3,7 +3,10 @@
     "allow": [
       "Bash(make:*)",
       "Bash(make build:*)",
-      "Bash(make tidy:*)"
+      "Bash(make tidy:*)",
+      "Bash(ls:*)",
+      "Bash(make test:*)",
+      "Bash(./build/Game:*)"
     ]
   }
 }
