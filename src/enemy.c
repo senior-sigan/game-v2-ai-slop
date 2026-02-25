@@ -1,5 +1,6 @@
 #include "enemy.h"
 #include "map.h"
+#include "sprites.h"
 #include <math.h>
 
 #define PI 3.14159265358979323846f
@@ -16,6 +17,7 @@ static void InitEnemy(Enemy* e, EnemyType type, float x, float y) {
     e->respawn_timer = 0.0f;
     e->patrol_target_x = x;
     e->patrol_target_y = y;
+    e->anim = (Animation){.frame_count = 4, .frame_duration = 0.2f};
 
     switch (type) {
     case ENEMY_SKELETON:
@@ -114,6 +116,8 @@ void EnemiesUpdate(GameState* state, float delta) {
                 e->y = e->spawn_y;
                 e->state = AI_IDLE;
                 e->attack_timer = 0.0f;
+                e->anim = (Animation){
+                    .frame_count = 4, .frame_duration = 0.2f};
             }
             continue;
         }
@@ -216,6 +220,20 @@ void EnemiesUpdate(GameState* state, float delta) {
             break;
         }
         }
+
+        switch (e->state) {
+        case AI_ATTACK:
+            AnimationSet(&e->anim, ANIM_ATTACK, 4, 0.12f);
+            break;
+        case AI_CHASE:
+        case AI_PATROL:
+            AnimationSet(&e->anim, ANIM_RUN, 6, 0.1f);
+            break;
+        default:
+            AnimationSet(&e->anim, ANIM_IDLE, 4, 0.2f);
+            break;
+        }
+        AnimationUpdate(&e->anim, delta);
     }
 
     state->enemy_count = 0;

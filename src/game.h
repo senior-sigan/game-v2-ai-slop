@@ -43,7 +43,16 @@ typedef enum {
 } AiState;
 
 typedef struct {
+    int current_frame;
+    float frame_timer;
+    float frame_duration;
+    int frame_count;
+    int kind;
+} Animation;
+
+typedef struct {
     float x, y;
+    float vx, vy;
     float hp, max_hp;
     float speed;
     float attack_range;
@@ -55,6 +64,7 @@ typedef struct {
     bool attacking;
     bool attack_applied;
     float attack_angle;
+    Animation anim;
 } Player;
 
 typedef struct {
@@ -72,6 +82,7 @@ typedef struct {
     float spawn_x, spawn_y;
     float patrol_target_x, patrol_target_y;
     AiState state;
+    Animation anim;
 } Enemy;
 
 typedef struct {

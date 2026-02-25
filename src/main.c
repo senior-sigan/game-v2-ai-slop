@@ -6,10 +6,14 @@
 #include "map.h"
 #include "combat.h"
 #include "render.h"
+#include "sprites.h"
 
 int main(int argc, char* argv[]) {
     InitWindow(800, 600, "Dark Camp");
     SetTargetFPS(60);
+
+    static SpriteAssets sprites = {0};
+    SpritesInit(&sprites);
 
     static GameState state = {0};
     MapInit(&state);
@@ -49,9 +53,9 @@ int main(int argc, char* argv[]) {
 
         BeginDrawing();
         ClearBackground(DARKGRAY);
-        RenderMap(&state);
-        RenderEnemies(&state);
-        RenderPlayer(&state);
+        RenderMap(&state, &sprites);
+        RenderEnemies(&state, &sprites);
+        RenderPlayer(&state, &sprites);
         RenderUI(&state);
         EndDrawing();
 
@@ -64,6 +68,7 @@ int main(int argc, char* argv[]) {
     if (runner != NULL) {
         RltCloseScriptRunner(runner);
     }
+    SpritesUnload(&sprites);
     CloseWindow();
     return test_failed ? 1 : 0;
 }

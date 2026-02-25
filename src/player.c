@@ -1,5 +1,6 @@
 #include "player.h"
 #include "map.h"
+#include "sprites.h"
 #include "raylib_tester.h"
 #include <math.h>
 
@@ -76,6 +77,9 @@ void PlayerHandleInput(GameState* state, float delta) {
         }
     }
 
+    p->vx = move_x;
+    p->vy = move_y;
+
     if (RltIsMouseButtonPressed(MOUSE_BUTTON_LEFT) && p->attack_timer <= 0.0f) {
         Vector2 mouse = GetMousePosition();
         float world_mx = 0.0f;
@@ -102,6 +106,15 @@ void PlayerUpdate(GameState* state, float delta) {
             p->attacking = false;
         }
     }
+
+    if (p->attacking) {
+        AnimationSet(&p->anim, ANIM_ATTACK, 4, 0.12f);
+    } else if (p->vx != 0.0f || p->vy != 0.0f) {
+        AnimationSet(&p->anim, ANIM_RUN, 6, 0.1f);
+    } else {
+        AnimationSet(&p->anim, ANIM_IDLE, 4, 0.2f);
+    }
+    AnimationUpdate(&p->anim, delta);
 
     if (MapIsCamp(state, p->x, p->y)) {
         p->hp += CAMP_REGEN_RATE * delta;
