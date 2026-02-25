@@ -1,8 +1,16 @@
 #include "player.h"
 #include "map.h"
-#include "render.h"
 #include "raylib_tester.h"
 #include <math.h>
+
+static void PlayerScreenToWorld(float screen_x, float screen_y,
+                                float cam_x, float cam_y,
+                                float* world_x, float* world_y) {
+    float rel_x = screen_x - SCREEN_CENTER_X;
+    float rel_y = screen_y - SCREEN_CENTER_Y;
+    *world_x = (rel_x / (float)ISO_SCALE_X + rel_y / (float)ISO_SCALE_Y) / 2.0f + cam_x;
+    *world_y = (rel_y / (float)ISO_SCALE_Y - rel_x / (float)ISO_SCALE_X) / 2.0f + cam_y;
+}
 
 void PlayerInit(Player* player) {
     *player = (Player){
@@ -72,8 +80,8 @@ void PlayerHandleInput(GameState* state, float delta) {
         Vector2 mouse = GetMousePosition();
         float world_mx = 0.0f;
         float world_my = 0.0f;
-        ScreenToWorld(mouse.x, mouse.y, state->camera_x, state->camera_y,
-                      &world_mx, &world_my);
+        PlayerScreenToWorld(mouse.x, mouse.y, state->camera_x, state->camera_y,
+                            &world_mx, &world_my);
 
         float dx = world_mx - p->x;
         float dy = world_my - p->y;

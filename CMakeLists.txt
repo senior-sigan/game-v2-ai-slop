@@ -64,7 +64,7 @@ target_link_libraries(${PROJECT_NAME} raylib ${LUA_LIBRARIES})
 # clang-tidy target
 find_program(CLANG_TIDY clang-tidy)
 if(CLANG_TIDY)
-    set(TIDY_EXTRA_ARGS "--extra-arg=-std=c17")
+    set(TIDY_EXTRA_ARGS "--extra-arg=-std=c23")
     if(APPLE)
         execute_process(
             COMMAND xcrun --show-sdk-path
