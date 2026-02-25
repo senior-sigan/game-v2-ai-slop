@@ -66,7 +66,49 @@ void RenderMap(const GameState* state) {
 }
 
 void RenderEnemies(const GameState* state) {
-    (void)state;
+    for (int i = 0; i < MAX_ENEMIES; i++) {
+        const Enemy* e = &state->enemies[i];
+        if (e->alive) continue;
+
+        Vector2 pos = WorldToScreen(e->x, e->y, state->camera_x, state->camera_y);
+        DrawCircleV(pos, 4.0f, GRAY);
+    }
+
+    for (int i = 0; i < MAX_ENEMIES; i++) {
+        const Enemy* e = &state->enemies[i];
+        if (!e->alive) continue;
+
+        Vector2 pos = WorldToScreen(e->x, e->y, state->camera_x, state->camera_y);
+
+        Color color = WHITE;
+        float radius = 10.0f;
+        switch (e->type) {
+        case ENEMY_SKELETON:
+            color = WHITE;
+            radius = 10.0f;
+            break;
+        case ENEMY_ZOMBIE:
+            color = GREEN;
+            radius = 14.0f;
+            break;
+        case ENEMY_LICH:
+            color = PURPLE;
+            radius = 11.0f;
+            break;
+        }
+
+        DrawCircleV(pos, radius, color);
+
+        float bar_width = radius * 2.0f;
+        float bar_height = 3.0f;
+        float bar_x = pos.x - bar_width / 2.0f;
+        float bar_y = pos.y - radius - 6.0f;
+        float hp_ratio = e->hp / e->max_hp;
+        DrawRectangle((int)bar_x, (int)bar_y,
+                      (int)bar_width, (int)bar_height, DARKGRAY);
+        DrawRectangle((int)bar_x, (int)bar_y,
+                      (int)(bar_width * hp_ratio), (int)bar_height, RED);
+    }
 }
 
 void RenderPlayer(const GameState* state) {
