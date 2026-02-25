@@ -74,8 +74,22 @@ void RltCloseScriptRunner(RltScriptRunner* runner);
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
+
+/* --- Soft-assert counters --- */
+
+static int rlt__assert_total = 0;
+static int rlt__assert_failed = 0;
+
+static void RltAssertFail(lua_State* state, const char* msg) {
+  rlt__assert_failed++;
+  luaL_where(state, 1);
+  const char* where = lua_tostring(state, -1);
+  (void)fprintf(stderr, "ASSERT FAILED [%s]: %s\n", where, msg);
+  lua_pop(state, 1);
+}
 
 /* --- Should-close flag --- */
 
@@ -278,6 +292,37 @@ static int RltLuaGetVar(lua_State* state) {
   return luaL_error(state, "unknown game variable: %s", name);
 }
 
+static int RltLuaAssertTrue(lua_State* state) {
+  const char* msg = luaL_optstring(state, 2, "assert_true failed");
+  rlt__assert_total++;
+  if (!lua_toboolean(state, 1)) {
+    RltAssertFail(state, msg);
+  }
+  return 0;
+}
+
+static int RltLuaAssertEq(lua_State* state) {
+  const char* msg = luaL_optstring(state, 3, "assert_eq failed");
+  rlt__assert_total++;
+  int equal = lua_compare(state, 1, 2, LUA_OPEQ);
+  if (!equal) {
+    RltAssertFail(state, msg);
+  }
+  return 0;
+}
+
+static int RltLuaAssertNear(lua_State* state) {
+  double val_a = luaL_checknumber(state, 1);
+  double val_b = luaL_checknumber(state, 2);
+  double eps = luaL_checknumber(state, 3);
+  const char* msg = luaL_optstring(state, 4, "assert_near failed");
+  rlt__assert_total++;
+  if (fabs(val_a - val_b) > eps) {
+    RltAssertFail(state, msg);
+  }
+  return 0;
+}
+
 static const luaL_Reg RLT_GAME_LIB[] = {
     {"take_screenshot", RltLuaTakeScreenshot},
     {"get_time", RltLuaGetTime},
@@ -290,6 +335,9 @@ static const luaL_Reg RLT_GAME_LIB[] = {
     {"mouse_up", RltLuaMouseUp},
     {"mouse_press", RltLuaMousePress},
     {"get_var", RltLuaGetVar},
+    {"assert_true", RltLuaAssertTrue},
+    {"assert_eq", RltLuaAssertEq},
+    {"assert_near", RltLuaAssertNear},
     {NULL, NULL},
 };
 
@@ -385,6 +433,17 @@ void RltUpdateScriptRunner(RltScriptRunner* runner) {
   } else if (status == LUA_OK) {
     runner->finished = true;
     lua_pop(runner->coroutine, nresults);
+    int passed = rlt__assert_total - rlt__assert_failed;
+    (void)fprintf(
+        stderr,
+        "Tests: %d passed, %d failed (%d total)\n",
+        passed,
+        rlt__assert_failed,
+        rlt__assert_total
+    );
+    if (rlt__assert_failed > 0) {
+      runner->had_error = true;
+    }
   } else {
     (void)fprintf(stderr, "Lua runtime error: %s\n", lua_tostring(runner->coroutine, -1));
     runner->finished = true;
