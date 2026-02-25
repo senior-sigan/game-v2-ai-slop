@@ -5,7 +5,6 @@
 #include <lualib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
 
 #define CANVAS_WIDTH 640
 #define CANVAS_HEIGHT 480
@@ -46,30 +45,89 @@ static void RegisterGameLib(lua_State *state) {
   lua_setglobal(state, "game");
 }
 
-// --- Lua script runner ---
+// --- Coroutine-based script runner ---
 
-static lua_State *LoadTestScript(const char *path) {
-  lua_State *state = luaL_newstate();
-  luaL_openlibs(state);
-  RegisterGameLib(state);
+typedef struct {
+  lua_State *main_state;
+  lua_State *coroutine;
+  double resume_at;
+  bool finished;
+} ScriptRunner;
 
-  if (luaL_dofile(state, path) != LUA_OK) {
-    (void)fprintf(stderr, "Lua error: %s\n", lua_tostring(state, -1));
-    lua_close(state);
-    return NULL;
+static bool InitScriptRunner(ScriptRunner *runner, const char *path) {
+  runner->main_state = luaL_newstate();
+  runner->coroutine = NULL;
+  runner->resume_at = 0.0;
+  runner->finished = false;
+
+  luaL_openlibs(runner->main_state);
+  RegisterGameLib(runner->main_state);
+
+  // Load script — it should define a test() function
+  if (luaL_dofile(runner->main_state, path) != LUA_OK) {
+    (void)fprintf(
+        stderr, "Lua load error: %s\n",
+        lua_tostring(runner->main_state, -1));
+    lua_close(runner->main_state);
+    runner->main_state = NULL;
+    return false;
   }
-  return state;
+
+  // Create a coroutine thread from test()
+  runner->coroutine = lua_newthread(runner->main_state);
+  // Thread is on main_state's stack — won't be GC'd while main_state lives
+
+  lua_getglobal(runner->coroutine, "test");
+  if (!lua_isfunction(runner->coroutine, -1)) {
+    (void)fprintf(stderr, "Lua error: test() function not found in script\n");
+    lua_close(runner->main_state);
+    runner->main_state = NULL;
+    return false;
+  }
+
+  return true;
 }
 
-static void CallLuaUpdate(lua_State *state) {
-  lua_getglobal(state, "update");
-  if (!lua_isfunction(state, -1)) {
-    lua_pop(state, 1);
+static void UpdateScriptRunner(ScriptRunner *runner) {
+  if (runner->finished) {
     return;
   }
-  if (lua_pcall(state, 0, 0, 0) != LUA_OK) {
-    (void)fprintf(stderr, "Lua update error: %s\n", lua_tostring(state, -1));
-    lua_pop(state, 1);
+  if (GetTime() < runner->resume_at) {
+    return;
+  }
+
+  int nresults = 0;
+#if LUA_VERSION_NUM >= 504
+  int status =
+      lua_resume(runner->coroutine, runner->main_state, 0, &nresults);
+#else
+  int status = lua_resume(runner->coroutine, runner->main_state, 0);
+  nresults = lua_gettop(runner->coroutine);
+#endif
+
+  if (status == LUA_YIELD) {
+    double seconds = 0.0;
+    if (nresults >= 1 && lua_isnumber(runner->coroutine, -1)) {
+      seconds = lua_tonumber(runner->coroutine, -1);
+    }
+    runner->resume_at = GetTime() + seconds;
+    lua_pop(runner->coroutine, nresults);
+  } else if (status == LUA_OK) {
+    runner->finished = true;
+    lua_pop(runner->coroutine, nresults);
+  } else {
+    (void)fprintf(
+        stderr, "Lua runtime error: %s\n",
+        lua_tostring(runner->coroutine, -1));
+    runner->finished = true;
+  }
+}
+
+static void CloseScriptRunner(ScriptRunner *runner) {
+  if (runner->main_state != NULL) {
+    lua_close(runner->main_state);
+    runner->main_state = NULL;
+    runner->coroutine = NULL;
   }
 }
 
@@ -84,10 +142,11 @@ int main(int argc, char *argv[]) {
   InitWindow(CANVAS_WIDTH, CANVAS_HEIGHT, "Game");
   SetTargetFPS(60);
 
-  lua_State *lua = NULL;
+  ScriptRunner runner = {NULL, NULL, 0.0, false};
+  bool has_script = false;
   if (script_path != NULL) {
-    lua = LoadTestScript(script_path);
-    if (lua == NULL) {
+    has_script = InitScriptRunner(&runner, script_path);
+    if (!has_script) {
       CloseWindow();
       return 1;
     }
@@ -114,13 +173,13 @@ int main(int argc, char *argv[]) {
     DrawFPS(0, 0);
     EndDrawing();
 
-    if (lua != NULL) {
-      CallLuaUpdate(lua);
+    if (has_script) {
+      UpdateScriptRunner(&runner);
     }
   }
 
-  if (lua != NULL) {
-    lua_close(lua);
+  if (has_script) {
+    CloseScriptRunner(&runner);
   }
   CloseWindow();
   return 0;
