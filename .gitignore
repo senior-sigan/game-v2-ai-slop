@@ -1,4 +1,5 @@
 build/
+cmake-build-web/
 .cache
 *.png
 settings.local.json

@@ -12,6 +12,7 @@ Checks: >
   -clang-analyzer-security.insecureAPI.*,
   -readability-magic-numbers,
   -readability-math-missing-parentheses,
+  -readability-implicit-bool-conversion,
   -misc-no-recursion,
   bugprone-assert-side-effect,
   bugprone-macro-repeated-side-effects,

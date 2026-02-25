@@ -9,6 +9,9 @@
  *   #define RLT_MAX_KEYS           512
  *   #define RLT_MAX_MOUSE_BUTTONS  8
  *   #define RLT_MAX_GAME_VARS      64
+ *
+ * When PLATFORM_WEB is defined, all Lua/test functionality is excluded and
+ * input functions become direct pass-throughs to raylib.
  */
 
 #ifndef RAYLIB_TESTER_H
@@ -16,6 +19,19 @@
 
 #include <raylib.h>
 #include <stdbool.h>
+
+#ifdef PLATFORM_WEB
+
+/* --- Web stubs: no Lua, no test runner, direct raylib input --- */
+
+static inline bool RltIsKeyDown(int key) { return IsKeyDown(key); }
+static inline bool RltIsKeyPressed(int key) { return IsKeyPressed(key); }
+static inline bool RltIsMouseButtonDown(int btn) { return IsMouseButtonDown(btn); }
+static inline bool RltIsMouseButtonPressed(int btn) { return IsMouseButtonPressed(btn); }
+static inline void RltClearSimOneshot(void) {}
+static inline bool RltShouldClose(void) { return false; }
+
+#else /* !PLATFORM_WEB */
 
 #ifndef RLT_MAX_KEYS
 #define RLT_MAX_KEYS 512
@@ -63,6 +79,8 @@ bool RltScriptRunnerFinished(const RltScriptRunner* runner);
 bool RltScriptRunnerHadError(const RltScriptRunner* runner);
 void RltCloseScriptRunner(RltScriptRunner* runner);
 
+#endif /* !PLATFORM_WEB */
+
 #endif /* RAYLIB_TESTER_H */
 
 /* ======================================================================== */
@@ -70,6 +88,7 @@ void RltCloseScriptRunner(RltScriptRunner* runner);
 /* ======================================================================== */
 
 #ifdef RAYLIB_TESTER_IMPLEMENTATION
+#ifndef PLATFORM_WEB
 
 #include <lauxlib.h>
 #include <lua.h>
@@ -473,4 +492,5 @@ void RltCloseScriptRunner(RltScriptRunner* runner) {
   }
 }
 
+#endif /* !PLATFORM_WEB */
 #endif /* RAYLIB_TESTER_IMPLEMENTATION */
