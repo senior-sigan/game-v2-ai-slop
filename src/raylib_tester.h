@@ -24,12 +24,22 @@
 
 /* --- Web stubs: no Lua, no test runner, direct raylib input --- */
 
-static inline bool RltIsKeyDown(int key) { return IsKeyDown(key); }
-static inline bool RltIsKeyPressed(int key) { return IsKeyPressed(key); }
-static inline bool RltIsMouseButtonDown(int btn) { return IsMouseButtonDown(btn); }
-static inline bool RltIsMouseButtonPressed(int btn) { return IsMouseButtonPressed(btn); }
+static inline bool RltIsKeyDown(int key) {
+  return IsKeyDown(key);
+}
+static inline bool RltIsKeyPressed(int key) {
+  return IsKeyPressed(key);
+}
+static inline bool RltIsMouseButtonDown(int btn) {
+  return IsMouseButtonDown(btn);
+}
+static inline bool RltIsMouseButtonPressed(int btn) {
+  return IsMouseButtonPressed(btn);
+}
 static inline void RltClearSimOneshot(void) {}
-static inline bool RltShouldClose(void) { return false; }
+static inline bool RltShouldClose(void) {
+  return false;
+}
 
 #else /* !PLATFORM_WEB */
 
@@ -458,13 +468,8 @@ void RltUpdateScriptRunner(RltScriptRunner* runner) {
     runner->finished = true;
     lua_pop(runner->coroutine, nresults);
     int passed = rlt__assert_total - rlt__assert_failed;
-    (void)fprintf(
-        stderr,
-        "Tests: %d passed, %d failed (%d total)\n",
-        passed,
-        rlt__assert_failed,
-        rlt__assert_total
-    );
+    (void)fprintf(stderr, "Tests: %d passed, %d failed (%d total)\n", passed, rlt__assert_failed,
+                  rlt__assert_total);
     if (rlt__assert_failed > 0) {
       runner->had_error = true;
     }

@@ -3,7 +3,7 @@ PROJECT := Game
 TEST_PATH := test.lua
 
 .PHONY: all
-all: build run
+all: format tidy build run
 
 .PHONY: reload
 reload:
@@ -28,6 +28,10 @@ run:
 .PHONY: tidy
 tidy: reload
 	cmake --build build --target tidy
+
+.PHONY: format
+format:
+	clang-format -i src/*.c src/*.h
 
 .PHONY: reload_web
 reload_web:
