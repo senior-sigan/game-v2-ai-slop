@@ -356,6 +356,11 @@ static void RltRegisterGameLib(lua_State* state) {
   RltRegisterConstInt(state, "KEY_SPACE", KEY_SPACE);
   RltRegisterConstInt(state, "KEY_ENTER", KEY_ENTER);
   RltRegisterConstInt(state, "KEY_ESCAPE", KEY_ESCAPE);
+  RltRegisterConstInt(state, "KEY_W", KEY_W);
+  RltRegisterConstInt(state, "KEY_A", KEY_A);
+  RltRegisterConstInt(state, "KEY_S", KEY_S);
+  RltRegisterConstInt(state, "KEY_D", KEY_D);
+  RltRegisterConstInt(state, "KEY_R", KEY_R);
 
   RltRegisterConstInt(state, "MOUSE_LEFT", MOUSE_BUTTON_LEFT);
   RltRegisterConstInt(state, "MOUSE_RIGHT", MOUSE_BUTTON_RIGHT);
