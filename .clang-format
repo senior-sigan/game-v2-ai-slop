@@ -1,0 +1,11 @@
+# Run manually to reformat a file:
+# clang-format -i --style=file <file>
+BasedOnStyle: Google
+ColumnLimit: 100
+UseTab: Never
+SpaceAfterTemplateKeyword: false
+AllowShortFunctionsOnASingleLine: Empty
+DerivePointerAlignment: false
+PointerAlignment: Left
+SortIncludes: true
+Standard: c++17
