@@ -1,5 +1,4 @@
 ---
-ExtraArgs: [-std=c17,-DDEBUG]
 FormatStyle: file
 HeaderFilterRegex:  'src/.*\.(h|hpp)$'
 SystemHeaders: false
