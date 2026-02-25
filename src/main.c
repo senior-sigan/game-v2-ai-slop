@@ -10,9 +10,21 @@
 #define CANVAS_HEIGHT 480
 #define RECT_WIDTH 60
 #define RECT_HEIGHT 40
-#define RECT_SPEED 200.0F
+#define RECT_SPEED 100.0F
+#define MAX_KEYS 512
 
 static bool g_should_close = false;
+static bool g_sim_keys[MAX_KEYS] = {false};
+
+static bool GameIsKeyDown(int key) {
+  if (IsKeyDown(key)) {
+    return true;
+  }
+  if ((key >= 0) && (key < MAX_KEYS)) {
+    return g_sim_keys[key];
+  }
+  return false;
+}
 
 // --- Lua bindings ---
 
@@ -33,15 +45,46 @@ static int LuaCloseGame(lua_State *state) {
   return 0;
 }
 
+static int LuaKeyDown(lua_State *state) {
+  int key = (int)luaL_checkinteger(state, 1);
+  if (key >= 0 && key < MAX_KEYS) {
+    g_sim_keys[key] = true;
+  }
+  return 0;
+}
+
+static int LuaKeyUp(lua_State *state) {
+  int key = (int)luaL_checkinteger(state, 1);
+  if (key >= 0 && key < MAX_KEYS) {
+    g_sim_keys[key] = false;
+  }
+  return 0;
+}
+
 static const luaL_Reg GAME_LIB[] = {
     {"take_screenshot", LuaTakeScreenshot},
     {"get_time", LuaGetTime},
     {"close", LuaCloseGame},
+    {"key_down", LuaKeyDown},
+    {"key_up", LuaKeyUp},
     {NULL, NULL},
 };
 
 static void RegisterGameLib(lua_State *state) {
   luaL_newlib(state, GAME_LIB);
+
+  // Export key constants
+  lua_pushinteger(state, KEY_LEFT);
+  lua_setfield(state, -2, "KEY_LEFT");
+  lua_pushinteger(state, KEY_RIGHT);
+  lua_setfield(state, -2, "KEY_RIGHT");
+  lua_pushinteger(state, KEY_UP);
+  lua_setfield(state, -2, "KEY_UP");
+  lua_pushinteger(state, KEY_DOWN);
+  lua_setfield(state, -2, "KEY_DOWN");
+  lua_pushinteger(state, KEY_SPACE);
+  lua_setfield(state, -2, "KEY_SPACE");
+
   lua_setglobal(state, "game");
 }
 
@@ -63,7 +106,6 @@ static bool InitScriptRunner(ScriptRunner *runner, const char *path) {
   luaL_openlibs(runner->main_state);
   RegisterGameLib(runner->main_state);
 
-  // Load script — it should define a test() function
   if (luaL_dofile(runner->main_state, path) != LUA_OK) {
     (void)fprintf(
         stderr, "Lua load error: %s\n",
@@ -73,9 +115,7 @@ static bool InitScriptRunner(ScriptRunner *runner, const char *path) {
     return false;
   }
 
-  // Create a coroutine thread from test()
   runner->coroutine = lua_newthread(runner->main_state);
-  // Thread is on main_state's stack — won't be GC'd while main_state lives
 
   lua_getglobal(runner->coroutine, "test");
   if (!lua_isfunction(runner->coroutine, -1)) {
@@ -152,19 +192,24 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  float rect_x = 0.0F;
+  float rect_x = (float)(CANVAS_WIDTH - RECT_WIDTH) / 2.0F;
   float rect_y = (float)(CANVAS_HEIGHT - RECT_HEIGHT) / 2.0F;
-  int direction = 1;
 
   while (!WindowShouldClose() && !g_should_close) {
     float delta = GetFrameTime();
-    rect_x += (RECT_SPEED * delta) * (float)direction;
-    if ((rect_x + RECT_WIDTH) >= CANVAS_WIDTH) {
-      rect_x = (float)(CANVAS_WIDTH - RECT_WIDTH);
-      direction = -1;
-    } else if (rect_x <= 0.0F) {
+    if (GameIsKeyDown(KEY_LEFT)) {
+      rect_x -= RECT_SPEED * delta;
+    }
+    if (GameIsKeyDown(KEY_RIGHT)) {
+      rect_x += RECT_SPEED * delta;
+    }
+
+    // Clamp to screen
+    if (rect_x < 0.0F) {
       rect_x = 0.0F;
-      direction = 1;
+    }
+    if ((rect_x + RECT_WIDTH) > CANVAS_WIDTH) {
+      rect_x = (float)(CANVAS_WIDTH - RECT_WIDTH);
     }
 
     BeginDrawing();
