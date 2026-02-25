@@ -1,5 +1,6 @@
 SHELL := /bin/bash
 PROJECT := Game
+TEST_PATH := test.lua
 
 .PHONY: all
 all: build run
@@ -15,6 +16,10 @@ build: reload
 .PHONY: clean
 clean:
 	rm -rf build
+
+.PHONY: test
+test: build
+	./build/$(PROJECT) $(TEST_PATH)
 
 .PHONY: run
 run:
